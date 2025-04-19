@@ -23,8 +23,7 @@ class UserResponse(UserBase):
     id: int
     categories: List[str]
     points: int = 0
-    created_at: datetime
-
+    created_at: Optional[datetime] = Field(None, description="最終ログイン日時")  # 説明を更新
 class UserLogin(BaseSchemaModel):
     name: str
     password: str

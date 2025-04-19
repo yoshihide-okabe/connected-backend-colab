@@ -6,7 +6,9 @@ from sqlalchemy import func
 from datetime import datetime
 
 from ...core.database import get_db
-from ..auth.jwt import get_current_user
+# from ..auth.jwt import get_current_user
+from ...core.dependencies import get_current_user
+from ...core.dependencies import get_current_user
 from ..users.models import User
 from ..projects.models import CoCreationProject
 from .models import Trouble, TroubleCategory

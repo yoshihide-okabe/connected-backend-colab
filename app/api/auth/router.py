@@ -15,6 +15,37 @@ from ..users.schemas import UserCreate, UserResponse, Token
 
 router = APIRouter()
 
+@router.post("/simple-token")
+def simple_token(
+    username: str,
+    password: str,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    簡易トークン取得: フォームなしバージョン
+    """
+    user = authenticate_user(db, username, password)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザー名またはパスワードが無効です",
+        )
+    
+    # アクセストークンを生成
+    access_token_expires = timedelta(days=30)  # より長い有効期限
+    access_token = create_access_token(
+        data={"sub": str(user.user_id)},
+        expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user_id": user.user_id,
+        "user_name": user.name
+    }
+
 @router.post("/token", response_model=Token)
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), 

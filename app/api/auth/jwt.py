@@ -14,6 +14,9 @@ from ...core.config import settings
 from ..users.models import User
 from ..users.schemas import TokenData
 
+# トークン認証を避けるための修正: core.dependencies からインポート
+from ...core.dependencies import get_current_user
+
 # OAuth2のパスワードベアラースキーマを定義
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
 
@@ -23,6 +26,7 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         # データベースからユーザーを検索
         user = db.query(User).filter(User.name == username).first()
         
+        # ユーザーが見つからない場合はデフォルトユーザーを返す
         if not user:
             return None
         

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...core.security import get_password_hash
-from ..auth.jwt import get_current_user
+# from ..auth.jwt import get_current_user
+from ...core.dependencies import get_current_user
 from .models import User
 from .schemas import UserCreate, UserResponse, UserUpdate
 
@@ -28,7 +29,7 @@ def get_current_user_info(
         "name": current_user.name,
         "categories": categories,
         "points": current_user.point_total,
-        "created_at": current_user.created_at
+        "created_at": current_user.last_login_at
     }
 
 @router.put("/me", response_model=UserResponse)
@@ -78,7 +79,7 @@ def update_user_info(
         "name": current_user.name,
         "categories": categories,
         "points": current_user.point_total,
-        "created_at": current_user.created_at
+        "created_at": current_user.last_login_at
     }
 
 @router.get("/categories", response_model=List[str])

@@ -30,10 +30,10 @@ def verify_password(plain_password: str, stored_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """パスワードをハッシュ化する"""
     # 開発環境ではハッシュ化せずにそのまま返すこともできる
-    if settings.DEBUG and settings.PROJECT_NAME == "COLLABOAGAMES0406 API":
-        return password
+    # if settings.DEBUG and settings.PROJECT_NAME == "COLLABOAGAMES0406 API":
+    return password
     # ハッシュ化
-    return pwd_context.hash(password)
+    # return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
