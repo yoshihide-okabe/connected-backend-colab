@@ -21,15 +21,17 @@ def get_current_user_info(
     現在のログインユーザーの情報を取得
     """
     # カテゴリーをリストに変換
-    categories = current_user.get_categories_list()
+    category_id = current_user.get_category_id()
+    category_name = current_user.get_category_name(db)
     
     # レスポンスを構築
     return {
         "id": current_user.user_id,
         "name": current_user.name,
-        "categories": categories,
+        "category_id": category_id,
+        "category_name": category_name,
         "points": current_user.point_total,
-        "created_at": current_user.last_login_at
+        "last_login_at": current_user.last_login_at
     }
 
 @router.put("/me", response_model=UserResponse)
@@ -70,16 +72,18 @@ def update_user_info(
     db.commit()
     db.refresh(current_user)
     
-    # カテゴリーをリストに変換
-    categories = current_user.get_categories_list()
+    # カテゴリー情報を取得
+    category_id = current_user.get_category_id()
+    category_name = current_user.get_category_name(db)
     
     # レスポンスを構築
     return {
         "id": current_user.user_id,
         "name": current_user.name,
-        "categories": categories,
+        "category_id": category_id,
+        "category_name": category_name,
         "points": current_user.point_total,
-        "created_at": current_user.last_login_at
+        "last_login_at": current_user.last_login_at
     }
 
 @router.get("/categories", response_model=List[str])

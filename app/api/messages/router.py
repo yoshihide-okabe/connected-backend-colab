@@ -30,11 +30,21 @@ def create_message(
             detail="指定されたお困りごとが見つかりません"
         )
     
+    # 親メッセージの存在確認（指定されている場合）
+    if message.parent_message_id:
+        parent_message = db.query(Message).filter(Message.message_id == message.parent_message_id).first()
+        if not parent_message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定された親メッセージが見つかりません"
+            )
+    
     # 新しいメッセージを作成
     new_message = Message(
         content=message.content,
-        user_id=current_user.user_id,
-        trouble_id=message.trouble_id
+        sender_user_id=current_user.user_id,  # user_idからsender_user_idに変更
+        trouble_id=message.trouble_id,
+        parent_message_id=message.parent_message_id
     )
     
     db.add(new_message)
@@ -42,12 +52,13 @@ def create_message(
     db.refresh(new_message)
     
     return schemas.MessageResponse(
-        id=new_message.id,
+        message_id=new_message.message_id,  # idからmessage_idに変更
         content=new_message.content,
-        user_id=new_message.user_id,
-        user_name=current_user.name,
+        sender_user_id=new_message.sender_user_id,  # user_idからsender_user_idに変更
+        sender_name=current_user.name,  # user_nameからsender_nameに変更
         trouble_id=new_message.trouble_id,
-        created_at=new_message.created_at
+        sent_at=new_message.sent_at,  # created_atからsent_atに変更
+        parent_message_id=new_message.parent_message_id
     )
 
 @router.get("/trouble/{trouble_id}", response_model=schemas.MessagesListResponse)

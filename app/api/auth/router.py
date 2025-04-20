@@ -151,7 +151,7 @@ def register_user(
     user = User(
         name=user_data.name,
         password=get_password_hash(user_data.password),
-        categories=",".join(user_data.categories) if user_data.categories else "",
+        category_id=str(user_data.category_id) if user_data.category_id else None,
         point_total=0,
         last_login_at=datetime.utcnow()
     )

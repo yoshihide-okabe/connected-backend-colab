@@ -21,27 +21,42 @@ class User(Base):
     projects = relationship("CoCreationProject", back_populates="creator", foreign_keys="CoCreationProject.creator_user_id")
     favorite_projects = relationship("UserProjectFavorite", back_populates="user")
     participating_projects = relationship("UserProjectParticipation", back_populates="user")
-    messages = relationship("Message", back_populates="user")
+    messages = relationship("Message", back_populates="sender", foreign_keys="Message.sender_user_id")  # userからsenderに変更
     troubles = relationship("Trouble", back_populates="creator")
     
     def get_points(self):
         """ポイント取得メソッド"""
         return self.point_total or 0
     
-    def get_categories_list(self):
-        """カテゴリー文字列をリストに変換"""
+    def get_category_id(self):
+        """カテゴリーIDを取得"""
         if not self.category_id:
-            return []
-        # 単一のカテゴリーIDを配列に変換
-        return [str(self.category_id)]
+            return None
+        try:
+            return int(self.category_id)
+        except (ValueError, TypeError):
+            return None
     
-    def set_categories_list(self, categories_list):
-        """カテゴリーリストを文字列に変換"""
-        if not categories_list:
+    def get_category_name(self, db):
+        """カテゴリー名を取得（DBセッションが必要）"""
+        if not self.category_id:
+            return None
+        
+        from ..projects.models import ProjectCategory  # 循環インポートを避けるためここでインポート
+        
+        try:
+            category_id = int(self.category_id)
+            category = db.query(ProjectCategory).filter(ProjectCategory.category_id == category_id).first()
+            return category.name if category else None
+        except (ValueError, TypeError, AttributeError):
+            return None
+    
+    def set_category_id(self, category_id):
+        """カテゴリーIDを設定"""
+        if category_id is None:
             self.category_id = None
         else:
-            # 最初のカテゴリーのみ使用
             try:
-                self.category_id = int(categories_list[0])
-            except (ValueError, IndexError):
+                self.category_id = str(int(category_id))  # 整数に変換して文字列として保存
+            except (ValueError, TypeError):
                 self.category_id = None

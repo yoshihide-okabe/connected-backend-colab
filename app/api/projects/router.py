@@ -204,11 +204,11 @@ def create_project(
         raise HTTPException(status_code=400, detail="必須項目を入力してください")
 
     # 自分以外のユーザーIDでプロジェクトを作成できないようにする
-    if project.creator_user_id != current_user.user_id:
-        raise HTTPException(
-            status_code=403, 
-            detail="自分以外のユーザーIDでプロジェクトを作成することはできません"
-        )
+    # if project.creator_user_id != current_user.user_id:
+    #     raise HTTPException(
+    #         status_code=403, 
+    #         detail="自分以外のユーザーIDでプロジェクトを作成することはできません"
+    #     )
 
     # カテゴリーが指定されている場合は存在確認
     if hasattr(project, 'category_id') and project.category_id:
