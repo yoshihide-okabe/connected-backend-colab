@@ -6,8 +6,8 @@ from typing import List, Optional
 from datetime import datetime
 
 from ...core.database import get_db
-# from ..auth.jwt import get_current_user
-from ...core.dependencies import get_current_user
+from ..auth.jwt import get_current_user
+# from ...core.dependencies import get_current_user
 from ..users.models import User
 from .models import CoCreationProject, UserProjectFavorite, ProjectCategory
 from .schemas import (
@@ -204,11 +204,11 @@ def create_project(
         raise HTTPException(status_code=400, detail="必須項目を入力してください")
 
     # 自分以外のユーザーIDでプロジェクトを作成できないようにする
-    # if project.creator_user_id != current_user.user_id:
-    #     raise HTTPException(
-    #         status_code=403, 
-    #         detail="自分以外のユーザーIDでプロジェクトを作成することはできません"
-    #     )
+    if project.creator_user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="自分以外のユーザーIDでプロジェクトを作成することはできません"
+        )
 
     # カテゴリーが指定されている場合は存在確認
     if hasattr(project, 'category_id') and project.category_id:

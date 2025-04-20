@@ -19,16 +19,20 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def verify_password(plain_password: str, stored_password: str) -> bool:
     """
     平文のパスワードとデータベースに保存されたパスワードを検証する
-    開発環境では直接比較も許可
+    ハッシュ化せずに直接比較
     """
     # 開発環境では単純な文字列比較も許可
-    if settings.DEBUG and plain_password == stored_password:
-        return True
-    # 通常のハッシュ検証
-    return pwd_context.verify(plain_password, stored_password)
+    # if settings.DEBUG and plain_password == stored_password:
+    #     return True
+    # # 通常のハッシュ検証
+    # return pwd_context.verify(plain_password, stored_password)
+    #
+    # 直接文字列比較
+    return plain_password == stored_password
+
 
 def get_password_hash(password: str) -> str:
-    """パスワードをハッシュ化する"""
+    """パスワードをハッシュ化せずそのまま返す"""
     # 開発環境ではハッシュ化せずにそのまま返すこともできる
     # if settings.DEBUG and settings.PROJECT_NAME == "COLLABOAGAMES0406 API":
     return password

@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 # 相対インポート
 from ...core.database import get_db
 from ...core.security import verify_password, SECRET_KEY, ALGORITHM
+# create_access_tokenをimportする
+from ...core.security import create_access_token
 from ...core.config import settings
 from ..users.models import User
 from ..users.schemas import TokenData
 
 # トークン認証を避けるための修正: core.dependencies からインポート
-from ...core.dependencies import get_current_user
+# from ...core.dependencies import get_current_user
 
 # OAuth2のパスワードベアラースキーマを定義
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
@@ -31,7 +33,9 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
             return None
         
         # パスワード検証
-        if verify_password(password, user.password):
+        # if verify_password(password, user.password):
+        # パスワード検証 - 直接比較
+        if user.password == password:
             return user
         
         return None
@@ -84,25 +88,25 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     
     return user
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """
-    JWTアクセストークンを生成する
-    
-    :param data: トークンに含めるデータ（通常はユーザーID）
-    :param expires_delta: トークンの有効期限
-    :return: エンコードされたJWTトークン
-    """
-    to_encode = data.copy()
-    
-    # 有効期限の設定
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire})
-    
-    # トークンをエンコード
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    
-    return encoded_jwt
+# def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+#     """
+#     JWTアクセストークンを生成する
+#     
+#     :param data: トークンに含めるデータ（通常はユーザーID）
+#     :param expires_delta: トークンの有効期限
+#     :return: エンコードされたJWTトークン
+#     """
+#     to_encode = data.copy()
+#     
+#     # 有効期限の設定
+#     if expires_delta:
+#         expire = datetime.utcnow() + expires_delta
+#     else:
+#         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+#     
+#     to_encode.update({"exp": expire})
+#     
+#     # トークンをエンコード
+#     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+#     
+#     return encoded_jwt
