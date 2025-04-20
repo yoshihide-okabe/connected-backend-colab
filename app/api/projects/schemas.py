@@ -43,6 +43,23 @@ class ProjectResponse(BaseSchemaModel):
     is_favorite: bool = False
     category_id: Optional[int] = None
     category: Optional[CategoryResponse] = None
+    
+    # フロントエンド互換のプロパティ (model_config設定により自動追加される)
+    @property
+    def id(self) -> int:
+        return self.project_id
+        
+    @property
+    def owner_name(self) -> str:
+        return self.creator_name
+        
+    @property
+    def status(self) -> str:
+        return "active"
+        
+    @property
+    def isFavorite(self) -> bool:
+        return self.is_favorite
 
 class ProjectListResponse(BaseSchemaModel):
     new_projects: List[ProjectResponse]

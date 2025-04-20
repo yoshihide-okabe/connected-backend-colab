@@ -132,24 +132,30 @@ def get_projects(
                 ProjectCategory.category_id == project.category_id
             ).first()
 
-        return ProjectResponse(
-            project_id=project.project_id,
-            title=project.title,
-            summary=project.summary if hasattr(project, 'summary') else None,
-            description=project.description,
-            creator_user_id=project.creator_user_id,
-            creator_name=creator.name if creator else "不明",
-            created_at=project.created_at,
-            updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
-            likes=likes,
-            comments=comments,
-            is_favorite=is_favorite,
-            category_id=project.category_id if hasattr(project, 'category_id') else None,
-            category=CategoryResponse(
-                category_id=category.category_id,
-                name=category.name
-            ) if category else None
-        )
+        return {
+        "project_id": project.project_id,
+        "id": project.project_id,  # フロントエンド互換のために追加
+        "title": project.title,
+        "description": project.description,
+        "summary": project.summary if hasattr(project, 'summary') else None,
+        "creator_user_id": project.creator_user_id,
+        "creator_name": creator.name if creator else "不明",
+        "owner_name": creator.name if creator else "不明",  # フロントエンド互換のために追加
+        "status": "active",  # フロントエンド側が期待する形式
+        "category_name": category.name if category else "その他",  # フロントエンド互換の名前
+        "created_at": project.created_at,
+        "createdAt": project.created_at.isoformat() if project.created_at else None,  # フロントエンド互換
+        "updated_at": project.updated_at if hasattr(project, 'updated_at') else None,
+        "likes": likes,
+        "comments": comments,
+        "is_favorite": is_favorite,
+        "isFavorite": is_favorite,  # フロントエンド互換のために追加
+        "category_id": project.category_id if hasattr(project, 'category_id') else None,
+        "category": {
+            "category_id": category.category_id,
+            "name": category.name
+        } if category else None
+    }
 
     return ProjectListResponse(
         new_projects=[convert_project(p) for p in new_projects],
@@ -475,7 +481,8 @@ def get_favorite_projects(
         likes = 24  # ダミー値
         comments = 8  # ダミー値
         
-        result.append(ProjectResponse(
+        # ここでProjectResponseインスタンスを作成
+        project_response = ProjectResponse(
             project_id=project.project_id,
             title=project.title,
             summary=project.summary if hasattr(project, 'summary') else None,
@@ -492,7 +499,9 @@ def get_favorite_projects(
                 category_id=category.category_id,
                 name=category.name
             ) if category else None
-        ))
+        )
+        
+        result.append(project_response)
     
     return result
 
