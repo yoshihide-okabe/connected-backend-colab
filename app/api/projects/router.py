@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Query  # Queryを追加
 
 from ...core.database import get_db
 from ..auth.jwt import get_current_user
@@ -367,3 +368,214 @@ def update_project(
             name=category.name
         ) if category else None
     )
+    
+# --- 以下、新規追加のエンドポイント ---
+
+# 新着プロジェクト取得 API（新規追加）
+@router.get("/recent", response_model=List[ProjectResponse])
+def get_recent_projects(
+    limit: int = Query(5, ge=1, le=100, description="取得するプロジェクト数の上限（1〜100）"),
+    hours: int = Query(24, ge=1, le=720, description="何時間前までのプロジェクトを「新着」とするか（1〜720時間）"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    指定された時間内の新着プロジェクトを取得する
+    """
+    # 現在時刻からhours時間前の日時を計算
+    since_time = datetime.now() - timedelta(hours=hours)
+    
+    # 新着プロジェクトを取得
+    recent_projects = (
+        db.query(CoCreationProject)
+        .filter(CoCreationProject.created_at >= since_time)
+        .order_by(CoCreationProject.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    
+    # プロジェクトをレスポンススキーマに変換
+    result = []
+    for project in recent_projects:
+        # お気に入り判定
+        is_favorite = db.query(UserProjectFavorite).filter(
+            UserProjectFavorite.user_id == current_user.user_id,
+            UserProjectFavorite.project_id == project.project_id
+        ).first() is not None
+        
+        # プロジェクト作成者の情報取得
+        creator = db.query(User).filter(User.user_id == project.creator_user_id).first()
+        
+        # カテゴリー情報の取得
+        category = None
+        if hasattr(project, 'category_id') and project.category_id:
+            category = db.query(ProjectCategory).filter(
+                ProjectCategory.category_id == project.category_id
+            ).first()
+        
+        # ダミーのいいね数とコメント数
+        likes = 24  # ダミー値
+        comments = 8  # ダミー値
+        
+        result.append(ProjectResponse(
+            project_id=project.project_id,
+            title=project.title,
+            summary=project.summary if hasattr(project, 'summary') else None,
+            description=project.description,
+            creator_user_id=project.creator_user_id,
+            creator_name=creator.name if creator else "不明",
+            created_at=project.created_at,
+            updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
+            likes=likes,
+            comments=comments,
+            is_favorite=is_favorite,
+            category_id=project.category_id if hasattr(project, 'category_id') else None,
+            category=CategoryResponse(
+                category_id=category.category_id,
+                name=category.name
+            ) if category else None
+        ))
+    
+    return result
+
+# お気に入りプロジェクト取得 API（新規追加）
+@router.get("/favorites", response_model=List[ProjectResponse])
+def get_favorite_projects(
+    limit: int = Query(5, ge=1, le=100, description="取得するプロジェクト数の上限（1〜100）"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    現在のユーザーのお気に入りプロジェクトを取得する
+    """
+    # お気に入りプロジェクトを取得
+    favorite_projects = (
+        db.query(CoCreationProject)
+        .join(UserProjectFavorite, UserProjectFavorite.project_id == CoCreationProject.project_id)
+        .filter(UserProjectFavorite.user_id == current_user.user_id)
+        .order_by(CoCreationProject.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    
+    # プロジェクトをレスポンススキーマに変換
+    result = []
+    for project in favorite_projects:
+        # プロジェクト作成者の情報取得
+        creator = db.query(User).filter(User.user_id == project.creator_user_id).first()
+        
+        # カテゴリー情報の取得
+        category = None
+        if hasattr(project, 'category_id') and project.category_id:
+            category = db.query(ProjectCategory).filter(
+                ProjectCategory.category_id == project.category_id
+            ).first()
+        
+        # ダミーのいいね数とコメント数
+        likes = 24  # ダミー値
+        comments = 8  # ダミー値
+        
+        result.append(ProjectResponse(
+            project_id=project.project_id,
+            title=project.title,
+            summary=project.summary if hasattr(project, 'summary') else None,
+            description=project.description,
+            creator_user_id=project.creator_user_id,
+            creator_name=creator.name if creator else "不明",
+            created_at=project.created_at,
+            updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
+            likes=likes,
+            comments=comments,
+            is_favorite=True,  # お気に入りリストなので常にTrue
+            category_id=project.category_id if hasattr(project, 'category_id') else None,
+            category=CategoryResponse(
+                category_id=category.category_id,
+                name=category.name
+            ) if category else None
+        ))
+    
+    return result
+
+# お気に入り追加 API（新規追加）
+@router.post("/{project_id}/favorite", status_code=status.HTTP_201_CREATED)
+def add_project_to_favorites(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    プロジェクトをお気に入りに追加
+    """
+    # プロジェクトの存在確認
+    project = db.query(CoCreationProject).filter(
+        CoCreationProject.project_id == project_id
+    ).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロジェクトが見つかりません"
+        )
+    
+    # すでにお気に入りに追加されているか確認
+    existing_favorite = db.query(UserProjectFavorite).filter(
+        UserProjectFavorite.user_id == current_user.user_id,
+        UserProjectFavorite.project_id == project_id
+    ).first()
+    
+    if existing_favorite:
+        # すでに追加済みの場合は成功として返す
+        return {
+            "message": "プロジェクトはすでにお気に入りに追加されています",
+            "project_id": project_id,
+            "is_favorite": True
+        }
+    
+    # お気に入り追加
+    new_favorite = UserProjectFavorite(
+        user_id=current_user.user_id,
+        project_id=project_id
+    )
+    
+    db.add(new_favorite)
+    db.commit()
+    
+    return {
+        "message": "プロジェクトをお気に入りに追加しました",
+        "project_id": project_id,
+        "is_favorite": True
+    }
+
+# お気に入り削除 API（新規追加）
+@router.delete("/{project_id}/favorite", status_code=status.HTTP_200_OK)
+def remove_project_from_favorites(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    プロジェクトをお気に入りから削除
+    """
+    # お気に入りレコードを取得
+    favorite = db.query(UserProjectFavorite).filter(
+        UserProjectFavorite.user_id == current_user.user_id,
+        UserProjectFavorite.project_id == project_id
+    ).first()
+    
+    if not favorite:
+        # すでに削除されている場合も成功として返す
+        return {
+            "message": "プロジェクトはお気に入りに追加されていません",
+            "project_id": project_id,
+            "is_favorite": False
+        }
+    
+    # お気に入りから削除
+    db.delete(favorite)
+    db.commit()
+    
+    return {
+        "message": "プロジェクトをお気に入りから削除しました",
+        "project_id": project_id,
+        "is_favorite": False
+    }
