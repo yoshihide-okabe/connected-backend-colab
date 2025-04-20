@@ -25,6 +25,7 @@ def get_categories(db: Session = Depends(get_db)):
         ) for category in categories
     ]
 
+
 @router.get("/{category_id}", response_model=TroubleCategoryResponse)
 def get_category(category_id: int, db: Session = Depends(get_db)):
     """
