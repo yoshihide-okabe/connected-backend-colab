@@ -312,6 +312,63 @@ def get_recent_projects(
     return result
     
 
+# お気に入りプロジェクト取得 API（新規追加）
+@router.get("/favorites", response_model=List[ProjectResponse])
+def get_favorite_projects(
+    limit: int = Query(5, ge=1, le=100, description="取得するプロジェクト数の上限（1〜100）"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    現在のユーザーのお気に入りプロジェクトを取得する
+    """
+    # お気に入りプロジェクトを取得
+    favorite_projects = (
+        db.query(CoCreationProject)
+        .join(UserProjectFavorite, UserProjectFavorite.project_id == CoCreationProject.project_id)
+        .filter(UserProjectFavorite.user_id == current_user.user_id)
+        .order_by(CoCreationProject.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    
+    # 結果変換用の配列
+    result = []
+    
+    # プロジェクトを変換
+    for project in favorite_projects:
+        # プロジェクト作成者の情報取得
+        creator = db.query(User).filter(User.user_id == project.creator_user_id).first()
+        
+        # カテゴリー情報の取得
+        category = None
+        if hasattr(project, 'category_id') and project.category_id:
+            category = db.query(ProjectCategory).filter(
+                ProjectCategory.category_id == project.category_id
+            ).first()
+        
+        # 変換したプロジェクトを追加
+        result.append(ProjectResponse(
+            project_id=project.project_id,
+            title=project.title,
+            summary=project.summary if hasattr(project, 'summary') else None,
+            description=project.description,
+            creator_user_id=project.creator_user_id,
+            creator_name=creator.name if creator else "不明",
+            created_at=project.created_at,
+            updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
+            likes=24,  # ダミー値
+            comments=8,  # ダミー値
+            is_favorite=True,  # お気に入りリストなので常にTrue
+            category_id=project.category_id if hasattr(project, 'category_id') else None,
+            category=CategoryResponse(
+                category_id=category.category_id,
+                name=category.name
+            ) if category else None
+        ))
+    
+    return result
+
 # いいねしたプロジェクト取得 API
 @router.get("/liked", response_model=List[ProjectResponse])
 def get_liked_projects(
@@ -505,79 +562,6 @@ def update_project(
 # --- 以下、新規追加のエンドポイント ---
 
 
-# お気に入りプロジェクト取得 API（新規追加）
-@router.get("/favorites", response_model=List[ProjectResponse])
-def get_favorite_projects(
-    limit: int = Query(5, ge=1, le=100, description="取得するプロジェクト数の上限（1〜100）"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    現在のユーザーのお気に入りプロジェクトを取得する
-    """
-    
-    try:
-        
-        # お気に入りプロジェクトを取得
-        favorite_projects = (
-            db.query(CoCreationProject)
-            .join(UserProjectFavorite, UserProjectFavorite.project_id == CoCreationProject.project_id)
-            .filter(UserProjectFavorite.user_id == current_user.user_id)
-            .order_by(CoCreationProject.created_at.desc())
-            .limit(limit)
-            .all()
-        )
-    
-        # プロジェクトをレスポンススキーマに変換
-        result = []
-        for project in favorite_projects:
-            # プロジェクト作成者の情報取得
-            creator = db.query(User).filter(User.user_id == project.creator_user_id).first()
-        
-            # カテゴリー情報の取得
-            category = None
-            if hasattr(project, 'category_id') and project.category_id:
-                category = db.query(ProjectCategory).filter(
-                    ProjectCategory.category_id == project.category_id
-                ).first()
-        
-            # ダミーのいいね数とコメント数
-            likes = 24  # ダミー値
-            comments = 8  # ダミー値
-        
-            # ここでProjectResponseインスタンスを作成
-            project_response = ProjectResponse(
-                project_id=project.project_id,
-                title=project.title,
-                summary=project.summary if hasattr(project, 'summary') else None,
-                description=project.description,
-                creator_user_id=project.creator_user_id,
-                creator_name=creator.name if creator else "不明",
-                created_at=project.created_at,
-                updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
-                likes=likes,
-                comments=comments,
-                is_favorite=True,  # お気に入りリストなので常にTrue
-                category_id=project.category_id if hasattr(project, 'category_id') else None,
-                category=CategoryResponse(
-                    category_id=category.category_id,
-                    name=category.name
-                ) if category else None
-            )
-        
-            result.append(project_response)
-    
-        return resultF
-    
-    except Exception as e:
-        import traceback
-        print(f"エラー詳細: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"error": str(e), "type": type(e).__name__}
-        )
-
 # お気に入り追加 API（新規追加）
 @router.post("/{project_id}/favorite", status_code=status.HTTP_201_CREATED)
 def add_project_to_favorites(
@@ -716,4 +700,3 @@ def get_simple_project(
             detail={"error": str(e), "type": type(e).__name__}
         )
         
-    return result
