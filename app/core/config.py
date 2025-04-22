@@ -64,9 +64,12 @@ class Settings(BaseSettings):
         extra = "ignore"  # 追加の変数を無視
 
     # プロパティとしてCORS_ORIGINSを実装
-    @property
+    
     def CORS_ORIGINS(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS_STR.split(",")]
+    # 文字列をリストに変換
+        if self.CORS_ORIGINS_STR:
+            return [origin.strip() for origin in self.CORS_ORIGINS_STR.split(",")]
+        return ["http://localhost:3000"]  # デフォルト値
     
     # データベースURLを動的に生成
     @property

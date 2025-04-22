@@ -64,6 +64,7 @@ class ProjectResponse(BaseSchemaModel):
 class ProjectListResponse(BaseSchemaModel):
     new_projects: List[ProjectResponse]
     favorite_projects: List[ProjectResponse]
+    liked_projects: List[ProjectResponse]  # いいねしたプロジェクトを追加
     total_projects: int
 
 class UserProjectFavoriteCreate(BaseSchemaModel):
