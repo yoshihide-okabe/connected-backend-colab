@@ -136,8 +136,24 @@ def get_troubles(
         creator = db.query(User).filter(User.user_id == trouble.creator_user_id).first()
         
         # コメント数取得（メッセージとして扱う）
-        from ..messages.models import Message
-        comments_count = db.query(Message).filter(Message.trouble_id == trouble.trouble_id).count()
+        # <!-- 修正: メッセージ数取得時のエラーハンドリングを追加 -->
+        comments_count = 0  # デフォルト値
+        try:
+            from ..messages.models import Message
+            comments_count = db.query(Message).filter(Message.trouble_id == trouble.trouble_id).count()
+        except Exception as e:
+            print(f"メッセージ数取得時にエラーが発生しました: {e}")
+            # テーブル名が異なる場合は正しいテーブル名を使って再試行
+            try:
+                # SQLAlchemyで直接クエリを実行してみる
+                result = db.execute(f"SELECT COUNT(*) FROM trouble_messages WHERE trouble_id = {trouble.trouble_id}")
+                for row in result:
+                    comments_count = row[0]
+                    break
+            except Exception as e2:
+                print(f"再試行時にエラーが発生しました: {e2}")
+                # エラー時はコメント数を0とする
+                comments_count = 0
         
         trouble_list.append(schemas.TroubleResponse(
             trouble_id=trouble.trouble_id,
@@ -175,8 +191,24 @@ def get_trouble_detail(
     creator = db.query(User).filter(User.user_id == trouble.creator_user_id).first()
     
     # コメント数取得（メッセージとして扱う）
-    from ..messages.models import Message
-    comments_count = db.query(Message).filter(Message.trouble_id == trouble.trouble_id).count()
+    # <!-- 修正: メッセージ数取得時のエラーハンドリングを追加 -->
+    comments_count = 0  # デフォルト値
+    try:
+        from ..messages.models import Message
+        comments_count = db.query(Message).filter(Message.trouble_id == trouble.trouble_id).count()
+    except Exception as e:
+        print(f"メッセージ数取得時にエラーが発生しました: {e}")
+        # テーブル名が異なる場合は正しいテーブル名を使って再試行
+        try:
+            # SQLAlchemyで直接クエリを実行してみる
+            result = db.execute(f"SELECT COUNT(*) FROM trouble_messages WHERE trouble_id = {trouble.trouble_id}")
+            for row in result:
+                comments_count = row[0]
+                break
+        except Exception as e2:
+            print(f"再試行時にエラーが発生しました: {e2}")
+            # エラー時はコメント数を0とする
+            comments_count = 0
     
     return schemas.TroubleDetailResponse(
         trouble_id=trouble.trouble_id,
@@ -222,6 +254,15 @@ def update_trouble(
     
     # プロジェクト情報取得
     project = db.query(CoCreationProject).filter(CoCreationProject.project_id == trouble.project_id).first()
+    
+    # <!-- 修正: メッセージ数取得時のエラーハンドリングを追加 -->
+    comments_count = 0  # デフォルト値
+    try:
+        from ..messages.models import Message
+        comments_count = db.query(Message).filter(Message.trouble_id == trouble.trouble_id).count()
+    except Exception as e:
+        print(f"メッセージ数取得時にエラーが発生しました: {e}")
+        # エラー時はコメント数を0とする
     
     return schemas.TroubleResponse(
         trouble_id=trouble.trouble_id,

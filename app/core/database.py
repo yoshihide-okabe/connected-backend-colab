@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from typing import Dict, Any
+import os
+from pathlib import Path  # Pathをインポート追加
 
 # 相対インポートに変更
 from .config import settings
@@ -18,12 +20,21 @@ def get_db_connect_args() -> Dict[str, Any]:
         ssl_mode = settings.AZURE_MYSQL_SSL_MODE.lower()
         if ssl_mode == "require":
             # SSL 証明書のパスを指定
+            project_root = Path(__file__).parent.parent.parent
+            ssl_cert_path = project_root / "DigiCertGlobalRootCA.crt.pem"
+            
+            # デバッグのためパスを表示
+            print(f"Using SSL certificate: {ssl_cert_path}")
+            
             connect_args["ssl"] = {
-                "ssl_ca": r"C:\Users\mmkji\.ssl\DigiCertGlobalRootCA.crt.pem"
+                "ssl_ca": str(ssl_cert_path)  # Pathオブジェクトを文字列に変換
             }
     elif "sqlite" in settings.SQLALCHEMY_DATABASE_URL:
         # SQLiteの場合は同時接続チェックをオフ
         connect_args["check_same_thread"] = False
+        
+    # デバッグ: 接続引数を表示
+    print(f"Database connection arguments: {connect_args}")
     
     return connect_args
 

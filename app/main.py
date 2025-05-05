@@ -80,9 +80,28 @@ if __name__ == "__main__":
 @app.on_event("startup")
 async def startup_event():
     """アプリケーション起動時の初期化処理"""
+    # ↓↓↓ 追加：環境変数と接続設定のログ出力 ↓↓↓
+    print("\n===== DATABASE CONNECTION SETTINGS =====")
+    print(f"USE_AZURE: {settings.USE_AZURE} (type: {type(settings.USE_AZURE)})")
+    print(f"DATABASE_URL: {settings.SQLALCHEMY_DATABASE_URL}")
+    if settings.USE_AZURE:
+        print(f"AZURE_MYSQL_HOST: {settings.AZURE_MYSQL_HOST}")
+        print(f"AZURE_MYSQL_DATABASE: {settings.AZURE_MYSQL_DATABASE}")
+        print(f"AZURE_MYSQL_USER: {settings.AZURE_MYSQL_USER}")
+        print(f"AZURE_MYSQL_PORT: {settings.AZURE_MYSQL_PORT}")
+        print(f"AZURE_MYSQL_SSL_MODE: {settings.AZURE_MYSQL_SSL_MODE}")
+    else:
+        print(f"DB_HOST: {settings.DB_HOST}")
+        print(f"DB_NAME: {settings.DB_NAME}")
+    print("========================================\n")
+    
     from app.core.database import SessionLocal
     from app.api.users.models import User
     from app.core.security import get_password_hash
+    
+    # ↓↓↓ 追加：セッション作成のログ出力 ↓↓↓
+    print("データベースセッションを初期化します...")
+    # ↑↑↑ 追加ここまで ↑↑↑
 
     db = SessionLocal()
     try:
@@ -105,9 +124,23 @@ async def startup_event():
             print("デフォルトユーザーを作成しました: ID=1, name=admin")
     except SQLAlchemyError as e:
         db.rollback()
+        # ↓↓↓ 修正：エラーログの詳細化 ↓↓↓
         print(f"デフォルトユーザー作成エラー: {str(e)}")
+        print("SQLAlchemy エラーの詳細:")
+        import traceback
+        traceback.print_exc()
+        # ↑↑↑ 修正ここまで ↑↑↑
+    except Exception as e:
+        # ↓↓↓ 追加：その他のエラーをキャッチして詳細表示 ↓↓↓
+        print(f"予期せぬエラーが発生しました: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # ↑↑↑ 追加ここまで ↑↑↑
     finally:
         db.close()
+        # ↓↓↓ 追加：デバッグ情報 ↓↓↓
+        print("データベースセッションを終了しました")
+        # ↑↑↑ 追加ここまで ↑↑↑
 
 # ミドルウェア追加: すべてのリクエストヘッダーをログ出力
 @app.middleware("http")
@@ -116,5 +149,14 @@ async def log_requests(request, call_next):
     print(f"Request path: {request.url.path}")
     print(f"Request headers: {request.headers}")
     
-    response = await call_next(request)
-    return response
+    # ↓↓↓ 追加：レスポンスと例外のキャッチ ↓↓↓
+    try:
+        response = await call_next(request)
+        print(f"Response status: {response.status_code}")
+        return response
+    except Exception as e:
+        print(f"Request processing error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
+    # ↑↑↑ 修正ここまで ↑↑↑
