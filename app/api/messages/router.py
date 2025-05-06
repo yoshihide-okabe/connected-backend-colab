@@ -83,7 +83,8 @@ def get_messages_by_trouble(
     # メッセージの取得
     query = db.query(Message).filter(Message.trouble_id == trouble_id)
     total = query.count()
-    messages = query.order_by(Message.created_at).offset(skip).limit(limit).all()
+
+    messages = query.order_by(Message.sent_at).offset(skip).limit(limit).all()
     
     # レスポンスの作成
     message_responses = []
