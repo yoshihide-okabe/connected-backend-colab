@@ -89,14 +89,15 @@ def get_messages_by_trouble(
     # レスポンスの作成
     message_responses = []
     for msg in messages:
-        user = db.query(User).filter(User.user_id == msg.user_id).first()
+        user = db.query(User).filter(User.user_id == msg.sender_user_id).first()
         message_responses.append(schemas.MessageResponse(
-            id=msg.id,
+            message_id=msg.message_id,
             content=msg.content,
-            user_id=msg.user_id,
-            user_name=user.name if user else "Unknown",
+            sender_user_id=msg.sender_user_id,
+            sender_name=user.name if user else "Unknown",
             trouble_id=msg.trouble_id,
-            created_at=msg.created_at
+            sent_at=msg.sent_at,
+            parent_message_id=msg.parent_message_id
         ))
     
     return schemas.MessagesListResponse(

@@ -10,6 +10,7 @@ class MessageBase(BaseSchemaModel):
 
 class MessageCreate(MessageBase):
     trouble_id: int = Field(..., description="関連するお困りごとID")
+    parent_message_id: Optional[int] = Field(None, description="親メッセージID（返信の場合）")
 
 class MessageResponse(MessageBase):
     message_id: int  # idからmessage_idに変更

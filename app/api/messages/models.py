@@ -14,7 +14,7 @@ class Message(Base):
     sender_user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     content = Column(Text, nullable=False)
     sent_at = Column(DateTime(timezone=True), server_default=func.now())
-    parent_message_id = Column(Integer, ForeignKey("messages.message_id"), nullable=True) 
+    parent_message_id = Column(Integer, ForeignKey("trouble_messages.message_id"), nullable=True) 
     
     # リレーションシップ
     sender = relationship("User", back_populates="messages")
