@@ -12,6 +12,12 @@ from ...core.dependencies import get_current_user
 from ..users.models import User
 from ..projects.models import CoCreationProject
 from .models import Trouble, TroubleCategory
+from ..messages.models import Message  # Messageモデルをインポート
+from .schemas import (
+    TroubleResponse, TroubleCreate, TroubleUpdate, 
+    TroubleDetailResponse, TroublesListResponse,
+    ParticipantResponse  # この行を追加
+)
 
 from . import schemas
 
@@ -325,3 +331,67 @@ def get_trouble_categories(
             name=category.name
         ) for category in categories
     ]
+    
+@router.get("/{trouble_id}/participants", response_model=List[ParticipantResponse])
+def get_trouble_participants(
+    trouble_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    特定のお困りごとに関連する参加者リストを取得する
+    """
+    # お困りごとの存在確認
+    trouble = db.query(Trouble).filter(Trouble.trouble_id == trouble_id).first()
+    if not trouble:
+        raise HTTPException(status_code=404, detail="お困りごとが見つかりません")
+    
+    # プロジェクト情報を取得
+    project = db.query(CoCreationProject).filter(CoCreationProject.project_id == trouble.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="関連するプロジェクトが見つかりません")
+    
+    # プロジェクト作成者（オーナー）情報
+    owner = db.query(User).filter(User.user_id == project.creator_user_id).first()
+    
+    # お困りごと作成者
+    creator = db.query(User).filter(User.user_id == trouble.creator_user_id).first()
+    
+    # メッセージの送信者たちを取得（重複を排除）
+    message_senders = db.query(User).join(Message, User.user_id == Message.sender_user_id)\
+        .filter(Message.trouble_id == trouble_id)\
+        .distinct().all()
+    
+    # 参加者リストを作成
+    participants = []
+    
+    # オーナーを追加
+    if owner:
+        participants.append({
+            "user_id": owner.user_id,
+            "name": owner.name,
+            "role": "オーナー",
+            "avatar": owner.name[0] if owner.name else "不"  # 名前の頭文字
+        })
+    
+    # お困りごと作成者を追加（オーナーと異なる場合）
+    if creator and (not owner or creator.user_id != owner.user_id):
+        participants.append({
+            "user_id": creator.user_id,
+            "name": creator.name,
+            "role": "作成者",
+            "avatar": creator.name[0] if creator.name else "不"
+        })
+    
+    # メッセージ送信者を追加（重複を避ける）
+    for sender in message_senders:
+        # 既に追加されている参加者は除外
+        if not any(p["user_id"] == sender.user_id for p in participants):
+            participants.append({
+                "user_id": sender.user_id,
+                "name": sender.name,
+                "role": "応援者",
+                "avatar": sender.name[0] if sender.name else "不"
+            })
+    
+    return participants

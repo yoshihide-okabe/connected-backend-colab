@@ -47,3 +47,9 @@ class TroubleDetailResponse(TroubleResponse):
 class TroublesListResponse(BaseSchemaModel):
     troubles: List[TroubleResponse]
     total: int
+    
+class ParticipantResponse(BaseSchemaModel):
+    user_id: int
+    name: str
+    role: str
+    avatar: str
