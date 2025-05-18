@@ -21,6 +21,8 @@ from .schemas import (
     CategoryResponse,
     RankingUser
 )
+# 追加: Messageモデルをインポート（コメント数取得用）
+from ..messages.models import Message
 
 router = APIRouter()
 
@@ -59,9 +61,16 @@ def get_user_projects(
                 ProjectCategory.category_id == project.category_id
             ).first()
 
-        # ダミーのいいね数とコメント数
-        likes = 24  # TODO: 実際のロジックに置き換える
-        comments = 8  # TODO: 実際のロジックに置き換える
+        # 修正: 実際のコメント数を取得（メッセージテーブルから）
+        try:
+            comments_count = db.query(Message).filter(
+                Message.trouble_id.in_(
+                    db.query(Trouble.trouble_id).filter(Trouble.project_id == project.project_id)
+                )
+            ).count()
+        except Exception as e:
+            print(f"コメント数取得エラー: {str(e)}")
+            comments_count = 0
 
         result.append(ProjectResponse(
             project_id=project.project_id,
@@ -133,6 +142,28 @@ def get_projects(
             category = db.query(ProjectCategory).filter(
                 ProjectCategory.category_id == project.category_id
             ).first()
+
+        # 修正: 実際のいいね数を取得
+        likes_count = db.query(UserProjectFavorite).filter(
+            UserProjectFavorite.project_id == project.project_id
+        ).count()
+        
+        # 修正: 実際のコメント数を取得
+        try:
+            from ..troubles.models import Trouble
+            # プロジェクトに関連するお困りごとを取得
+            trouble_ids = [
+                trouble.trouble_id for trouble in 
+                db.query(Trouble).filter(Trouble.project_id == project.project_id).all()
+            ]
+            
+            # お困りごとに関連するメッセージをカウント
+            comments_count = db.query(Message).filter(
+                Message.trouble_id.in_(trouble_ids) if trouble_ids else False
+            ).count()
+        except Exception as e:
+            print(f"コメント数取得エラー: {str(e)}")
+            comments_count = 0
 
         return {
         "project_id": project.project_id,
@@ -288,6 +319,28 @@ def get_recent_projects(
             category = db.query(ProjectCategory).filter(
                 ProjectCategory.category_id == project.category_id
             ).first()
+        
+        # 修正: 実際のいいね数を取得
+        likes_count = db.query(UserProjectFavorite).filter(
+            UserProjectFavorite.project_id == project.project_id
+        ).count()
+        
+        # 修正: 実際のコメント数を取得
+        try:
+            from ..troubles.models import Trouble
+            # プロジェクトに関連するお困りごとを取得
+            trouble_ids = [
+                trouble.trouble_id for trouble in 
+                db.query(Trouble).filter(Trouble.project_id == project.project_id).all()
+            ]
+            
+            # お困りごとに関連するメッセージをカウント
+            comments_count = db.query(Message).filter(
+                Message.trouble_id.in_(trouble_ids) if trouble_ids else False
+            ).count()
+        except Exception as e:
+            print(f"コメント数取得エラー: {str(e)}")
+            comments_count = 0
         
         result.append(ProjectResponse(
             project_id=project.project_id,
