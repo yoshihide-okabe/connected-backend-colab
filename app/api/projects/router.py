@@ -61,6 +61,11 @@ def get_user_projects(
                 ProjectCategory.category_id == project.category_id
             ).first()
 
+        # 修正: 実際のいいね数を取得
+        likes_count = db.query(UserProjectFavorite).filter(
+            UserProjectFavorite.project_id == project.project_id
+        ).count()
+
         # 修正: 実際のコメント数を取得（メッセージテーブルから）
         try:
             comments_count = db.query(Message).filter(
@@ -81,8 +86,8 @@ def get_user_projects(
             creator_name=creator.name if creator else "不明",
             created_at=project.created_at,
             updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
-            likes=likes,
-            comments=comments,
+            likes=likes_count,  # 修正: 実際のいいね数
+            comments=comments_count,  # 修正: 実際のコメント数
             is_favorite=is_favorite,
             category_id=project.category_id if hasattr(project, 'category_id') else None,
             category=CategoryResponse(
@@ -123,10 +128,6 @@ def get_projects(
 
     # プロジェクトをレスポンススキーマに変換
     def convert_project(project):
-        # ダミーのいいね数とコメント数
-        likes = 24  # TODO: 実際のロジックに置き換える
-        comments = 8  # TODO: 実際のロジックに置き換える
-        
         # お気に入り判定
         is_favorite = db.query(UserProjectFavorite).filter(
             UserProjectFavorite.user_id == user_id,
@@ -179,8 +180,8 @@ def get_projects(
         "created_at": project.created_at,
         "createdAt": project.created_at.isoformat() if project.created_at else None,  # フロントエンド互換
         "updated_at": project.updated_at if hasattr(project, 'updated_at') else None,
-        "likes": likes,
-        "comments": comments,
+        "likes": likes_count,  # 修正: 実際のいいね数
+        "comments": comments_count,  # 修正: 実際のコメント数
         "is_favorite": is_favorite,
         "isFavorite": is_favorite,  # フロントエンド互換のために追加
         "category_id": project.category_id if hasattr(project, 'category_id') else None,
@@ -351,8 +352,8 @@ def get_recent_projects(
             creator_name=creator.name if creator else "不明",
             created_at=project.created_at,
             updated_at=project.updated_at if hasattr(project, 'updated_at') else None,
-            likes=0,  # 実際の値に置き換える
-            comments=0,  # 実際の値に置き換える
+            likes=likes_count,  # 修正: 実際のいいね数
+            comments=comments_count,  # 修正: 実際のコメント数
             is_favorite=is_favorite,
             category_id=project.category_id if hasattr(project, 'category_id') else None,
             category=CategoryResponse(
